@@ -1,0 +1,7 @@
+taxiflow:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('TAXIFLOW_DATA', '../data') }}/warehouse.duckdb"
+      threads: 4

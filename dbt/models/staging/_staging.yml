@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: stg_yellow_trips
+    description: Every raw trip with a dq_reason (NULL = valid). Grain = one raw row.
+    columns:
+      - name: trip_key
+        data_tests: [unique, not_null]
+      - name: dq_reason
+        data_tests:
+          - accepted_values:
+              values: [missing_timestamp, pickup_outside_file_month, dropoff_before_pickup,
+                       duration_too_long, implausible_distance, unknown_zone, negative_amount]
+  - name: stg_zones
+    columns:
+      - name: location_id
+        data_tests: [unique, not_null]
+  - name: stg_stream_events
+    description: Deduplicated stream events. Grain = one event_id (= one replayed trip).
+    columns:
+      - name: event_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships: {to: ref('stg_yellow_trips'), field: trip_key}
+      - name: event_time
+        data_tests: [not_null]
+  - name: stg_stream_late
+    description: Events that arrived behind the consumer watermark (kept for audit, not in windows).

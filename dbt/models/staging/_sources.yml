@@ -1,0 +1,16 @@
+version: 2
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: yellow_trips
+        description: One row per record in a TLC file, loaded as-is. Grain = (source_file, source_row).
+        columns:
+          - name: source_file
+            data_tests: [not_null]
+          - name: source_row
+            data_tests: [not_null]
+      - name: ingest_manifest
+        columns:
+          - name: file_name
+            data_tests: [unique, not_null]
