@@ -84,3 +84,24 @@ def test_restart_resumes_from_committed_offset(replay):
     a = run_consumer(FileBroker(tmp / "broker"), out, batch_size=500, max_batches=2)
     b = run_consumer(FileBroker(tmp / "broker"), out, batch_size=500)
     assert a.messages + b.messages == len(msgs)
+
+
+class FlakyEmptyBroker(FileBroker):
+    """Returns empty polls first, like a Kafka consumer during group rebalance."""
+
+    def __init__(self, root, empties):
+        super().__init__(root)
+        self.empties = empties
+
+    def poll(self, max_messages):
+        if self.empties:
+            self.empties -= 1
+            return []
+        return super().poll(max_messages)
+
+
+def test_initial_empty_polls_do_not_end_consumption(replay):
+    tmp, msgs, _ = replay
+    assert run_consumer(FlakyEmptyBroker(tmp / "broker", 2), tmp / "s1").messages == 0
+    s = run_consumer(FlakyEmptyBroker(tmp / "broker", 2), tmp / "s2", idle_polls=3)
+    assert s.messages == len(msgs)

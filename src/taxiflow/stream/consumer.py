@@ -192,14 +192,24 @@ def run_consumer(
     max_batches: int | None = None,
     allowed_lateness: dt.timedelta = dt.timedelta(minutes=15),
     crash_before_commit: bool = False,
+    idle_polls: int = 1,
 ) -> ConsumerStats:
-    """Consume until drained (or max_batches). `crash_before_commit` is a test hook."""
+    """Consume until `idle_polls` consecutive empty polls (or max_batches).
+
+    Use idle_polls > 1 for Kafka: the first polls can be empty during group rebalancing.
+    `crash_before_commit` is a test hook.
+    """
     proc = StreamProcessor(allowed_lateness, max_event_time=_load_state(out))
     stats = ConsumerStats()
+    idle = 0
     while max_batches is None or stats.batches < max_batches:
         msgs = broker.poll(batch_size)
         if not msgs:
-            break
+            idle += 1
+            if idle >= idle_polls:
+                break
+            continue
+        idle = 0
         res = proc.process(msgs)
         write_batch(out, msgs[0][0], msgs[-1][0], res)
         if crash_before_commit:

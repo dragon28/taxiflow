@@ -73,6 +73,7 @@ def cmd_consume(a: argparse.Namespace) -> None:
             a.batch_size,
             a.max_batches,
             dt.timedelta(minutes=a.lateness_minutes),
+            idle_polls=a.idle_polls if a.idle_polls else (6 if a.broker == "kafka" else 1),
         )
     finally:
         b.close()
@@ -119,6 +120,7 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--batch-size", type=int, default=1000)
             s.add_argument("--max-batches", type=int)
             s.add_argument("--lateness-minutes", type=int, default=15)
+            s.add_argument("--idle-polls", type=int, help="empty polls before stopping")
 
     s = sub.add_parser("status", help="show ingestion manifest")
     s.set_defaults(fn=cmd_status)

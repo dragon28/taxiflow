@@ -64,7 +64,9 @@ class FileBroker:
         pass
 
 
-class KafkaBroker:  # pragma: no cover - needs a running Redpanda/Kafka
+class KafkaBroker:  # pragma: no cover - exercised by the `kafka` CI job against Redpanda
+    """Single-partition topic only: output file names are derived from offsets."""
+
     def __init__(
         self,
         bootstrap: str = "localhost:19092",
@@ -74,7 +76,9 @@ class KafkaBroker:  # pragma: no cover - needs a running Redpanda/Kafka
         from confluent_kafka import Consumer, Producer
 
         self.topic = topic
-        self._producer = Producer({"bootstrap.servers": bootstrap, "enable.idempotence": True})
+        self._producer = Producer(
+            {"bootstrap.servers": bootstrap, "enable.idempotence": True, "acks": "all"}
+        )
         self._consumer = Consumer(
             {
                 "bootstrap.servers": bootstrap,
@@ -84,13 +88,26 @@ class KafkaBroker:  # pragma: no cover - needs a running Redpanda/Kafka
             }
         )
         self._subscribed = False
+        self._errors: list[str] = []
+
+    def _on_delivery(self, err, _msg) -> None:
+        if err is not None:
+            self._errors.append(str(err))
 
     def produce(self, messages: list[bytes]) -> None:
-        for i, m in enumerate(messages):
-            self._producer.produce(self.topic, m)
-            if i % 10_000 == 0:
-                self._producer.poll(0)
-        self._producer.flush()
+        for m in messages:
+            while True:
+                try:
+                    self._producer.produce(self.topic, m, on_delivery=self._on_delivery)
+                    break
+                except BufferError:  # local queue full: let it drain, then retry
+                    self._producer.poll(0.5)
+            self._producer.poll(0)
+        remaining = self._producer.flush(60)
+        if remaining or self._errors:
+            raise RuntimeError(
+                f"{remaining} undelivered, {len(self._errors)} delivery errors: {self._errors[:3]}"
+            )
 
     def poll(self, max_messages: int) -> list[tuple[int, bytes]]:
         if not self._subscribed:
@@ -101,6 +118,8 @@ class KafkaBroker:  # pragma: no cover - needs a running Redpanda/Kafka
         for m in msgs:
             if m.error():
                 raise RuntimeError(m.error())
+            if m.partition() != 0:
+                raise RuntimeError("taxiflow expects a single-partition topic (partition 0)")
             out.append((m.offset(), m.value()))
         return out
 

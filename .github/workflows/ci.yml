@@ -1,5 +1,8 @@
 name: ci
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,3 +14,33 @@ jobs:
       - run: uv run pytest -q
       - name: End-to-end demo on the offline fixture
         run: make demo
+
+  redpanda:
+    # Streaming path against a real Kafka-compatible broker (Redpanda in Docker).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TAXIFLOW_DATA: ${{ github.workspace }}/data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-extras
+      - run: docker compose up -d --wait redpanda
+      - name: Create single-partition topic
+        run: docker compose exec -T redpanda rpk topic create trips -p 1 -r 1
+      - run: uv run taxiflow sample && uv run taxiflow ingest
+      - run: uv run taxiflow produce --broker kafka
+      - name: Consume 3 batches, then stop (simulated restart)
+        run: uv run taxiflow consume --broker kafka --max-batches 3
+      - name: Resume from committed offsets
+        run: uv run taxiflow consume --broker kafka
+      - name: Reconcile stream output with the replay
+        run: uv run python scripts/check_stream.py data/raw/yellow_tripdata_2024-01.parquet data/stream
+      - name: Committed offset equals topic end (no lag)
+        run: |
+          docker compose exec -T redpanda rpk group describe taxiflow-consumer
+          lag=$(docker compose exec -T redpanda rpk group describe taxiflow-consumer | awk '$1=="trips"{print $NF}')
+          echo "lag=$lag"; test "$lag" = "0"
+      - run: cd dbt && uv run dbt build --profiles-dir .
+      - if: always()
+        run: docker compose logs --tail 50 redpanda; docker compose down -v

@@ -49,8 +49,11 @@ make test         # unit + integration tests
 Real data and a real broker:
 
 ```bash
+export TAXIFLOW_DATA=$PWD/data/real
 uv run taxiflow download 2024-01:2024-03 && uv run taxiflow ingest && make transform
-make up && make stream BROKER=kafka   # needs Docker; Redpanda Console at :8080
+# use a separate data dir: the fixture has the same file name and download skips existing files
+make up && docker compose exec redpanda rpk topic create trips -p 1
+make stream BROKER=kafka              # Redpanda Console at :8080
 ```
 
 ## Dashboard preview
@@ -73,6 +76,10 @@ From `make test` and `make demo` on the fixture (also run in CI):
 | Batch | 20,060 raw rows → 19,900 valid trips + 160 quarantined |
 | Stream replay | 20,432 messages → 20,040 accepted, 367 duplicate deliveries removed, 20 late, 5 malformed |
 | Rerun | second `make demo` loads nothing new (idempotent) |
+| Real TLC data (local) | Jan+Feb 2024: 5,972,150 rows loaded in 1.7 s, 39/39 dbt steps, 3,678 quarantined |
+| Redpanda (CI job) | replay + stop/resume consumer + reconciliation + zero lag + dbt build |
+
+Details and caveats: [docs/validation.md](docs/validation.md).
 
 ## Data model
 
@@ -95,7 +102,7 @@ From `make test` and `make demo` on the fixture (also run in CI):
 * **Identical rows are kept.** Hash-based dedupe of trips would wrongly merge real trips.
 * **Delivery semantics: at-least-once + idempotent persistence.** The consumer writes
   deterministic file names (`part-<first offset>-<last offset>`) atomically, *then* commits offsets.
-  With the file broker and fixed batch size, a crash replays into the same files (tested); Kafka recovery is untested; cross-restart duplicates are removed in dbt.
+  With the file broker and fixed batch size, a crash replays into the same files (tested); with Kafka, a restart is tested in CI and any re-delivered events are deduplicated; cross-restart duplicates are removed in dbt.
   This is tested with a simulated crash.
 * **Event time, not processing time.** Watermark = max event time − allowed lateness (15 min).
   Older events go to `stream/late/` and are counted; malformed payloads go to `dead_letter/`.
@@ -113,7 +120,7 @@ From `make test` and `make demo` on the fixture (also run in CI):
 
 ## Limitations / next steps
 
-* Docker/Redpanda path is not exercised in CI.
+* Kafka path supports single-partition topics only.
 * TLC timestamps are local NYC time without zone; DST-ambiguous hours are not resolved.
 * `fct_trips` is a full rebuild; an incremental model partitioned by source month is the next step.
 * Orchestration is Make + CLI; a Dagster asset graph with monthly partitions would be a natural addition.
