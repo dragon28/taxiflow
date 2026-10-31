@@ -53,6 +53,27 @@ uv run taxiflow download 2024-01:2024-03 && uv run taxiflow ingest && make trans
 make up && make stream BROKER=kafka   # needs Docker; Redpanda Console at :8080
 ```
 
+## Dashboard preview
+
+Screenshots of the Streamlit dashboard running on the **deterministic synthetic fixture** (TLC schema,
+real zone lookup). The figures are demo output, not findings about real NYC traffic.
+
+![Batch demand tab: valid trips, revenue, trips by hour, top pickup zones](docs/images/dashboard-batch.png)
+![Data quality tab: every raw row is valid or quarantined with a reason, plus the ingest manifest](docs/images/dashboard-data.png)
+![Stream tab: on-time unique events, 5-minute windows, late events](docs/images/dashboard-stream.png)
+
+## Validated demo results
+
+From `make test` and `make demo` on the fixture (also run in CI):
+
+| Check | Result |
+|---|---|
+| pytest | 9 tests passed |
+| `dbt build` | 39 steps succeeded (1 seed, 11 models, 27 data tests) |
+| Batch | 20,060 raw rows → 19,900 valid trips + 160 quarantined |
+| Stream replay | 20,432 messages → 20,040 accepted, 367 duplicate deliveries removed, 20 late, 5 malformed |
+| Rerun | second `make demo` loads nothing new (idempotent) |
+
 ## Data model
 
 | Model | Grain | Notes |
