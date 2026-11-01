@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras
-      - run: uv run ruff check src tests dashboard
+      - run: uv run ruff check src tests dashboard scripts
       - run: uv run pytest -q
       - name: End-to-end demo on the offline fixture
         run: make demo

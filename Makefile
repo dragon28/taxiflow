@@ -30,7 +30,7 @@ test:
 	uv run pytest -q
 
 lint:
-	uv run ruff check src tests dashboard
+	uv run ruff check src tests dashboard scripts
 
 up:
 	docker compose up -d --wait
