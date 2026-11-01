@@ -2,6 +2,8 @@
 
 [![ci](https://github.com/dragon28/taxiflow/actions/workflows/ci.yml/badge.svg)](https://github.com/dragon28/taxiflow/actions/workflows/ci.yml) [![report](https://github.com/dragon28/taxiflow/actions/workflows/deploy.yml/badge.svg)](https://github.com/dragon28/taxiflow/actions/workflows/deploy.yml)
 
+**[Open the interactive dashboard →](https://taxiflow.streamlit.app/)** (Streamlit; if it has been idle, click the wake-up button and wait about a minute while it rebuilds the demo data)
+
 **[View the live report →](https://dragon28.github.io/taxiflow/)** (static page rebuilt by GitHub Actions on every push to main, weekly, and on demand via *Actions → deploy-report → Run workflow*).
 
 An end-to-end data engineering project on public **NYC TLC yellow-taxi trips**, runnable on a laptop

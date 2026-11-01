@@ -67,7 +67,8 @@ small{{color:#666}}</style>
 <h1>TaxiFlow: NYC taxi batch + streaming analytics</h1>
 <p><small>Static report rebuilt by GitHub Actions on {now} from commit {sha}, using the
 offline sample fixture. Source: <a href="https://github.com/dragon28/taxiflow">dragon28/taxiflow</a>.
-The interactive version is the Streamlit dashboard (<code>make dashboard</code>).</small></p>
+Interactive version:
+<a href="https://taxiflow.streamlit.app/">taxiflow.streamlit.app</a>.</small></p>
 <h2>Batch demand</h2><div class=k>
 <div>Valid trips<b>{int(k.trips[0]):,}</b></div>
 <div>Revenue (excl. refunds)<b>${k.revenue[0]:,.0f}</b></div>
