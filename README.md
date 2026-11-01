@@ -1,6 +1,8 @@
 # TaxiFlow — local batch + streaming data platform
 
-[![ci](https://github.com/dragon28/taxiflow/actions/workflows/ci.yml/badge.svg)](https://github.com/dragon28/taxiflow/actions/workflows/ci.yml)
+[![ci](https://github.com/dragon28/taxiflow/actions/workflows/ci.yml/badge.svg)](https://github.com/dragon28/taxiflow/actions/workflows/ci.yml) [![report](https://github.com/dragon28/taxiflow/actions/workflows/deploy.yml/badge.svg)](https://github.com/dragon28/taxiflow/actions/workflows/deploy.yml)
+
+**[View the live report →](https://dragon28.github.io/taxiflow/)** (static page rebuilt by GitHub Actions on every push to main, weekly, and on demand via *Actions → deploy-report → Run workflow*).
 
 An end-to-end data engineering project on public **NYC TLC yellow-taxi trips**, runnable on a laptop
 with no cloud account. One repo, two pipelines, one warehouse:
